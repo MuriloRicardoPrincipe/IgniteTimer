@@ -1,60 +1,65 @@
-import { Play } from "phosphor-react";
-import { useForm } from "react-hook-form";
-import { CountDownConteiner, FormConteiner, HomeConteiner, MinutesAmountInput, Separator, StartButtonCountDown, TaskInput } from "./styles";
+import { HandPalm, Play } from "phosphor-react";
+import { FormProvider, useForm } from "react-hook-form";
+import {  HomeConteiner, StartButtonCountDown, StopButtonCountDown } from "./styles";
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as zod from 'zod'
+import { createContext, useContext, useEffect, useState } from "react";
+import { differenceInSeconds } from "date-fns";
+import { NewCycleForm } from "./NewCycleForm";
+import { Countdown } from "./Countdown";
+import { CyclesContext } from "../../contexts/CycleContext";
+
+const newCycleFormValidationSchema = zod.object({
+    task: zod.string().min(1, 'Informe a tarefa'),
+    minutesAmount: zod.number().min(5).max(60),
+})
+
+type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>
 
 export function Home() {
 
-    const {register, handleSubmit, watch} = useForm()
+    const {activeCycle, createNewCycle, interruptCurrentCycle} = useContext(CyclesContext)
 
-    function handleCreateNewCycle(data:any){
-        console.log(data)
+    const newCycleForm = useForm<NewCycleFormData>({
+        resolver: zodResolver(newCycleFormValidationSchema),
+        defaultValues: {
+            task: '',
+            minutesAmount: 0,
+        },
+    })
+
+    const { handleSubmit, watch, reset } = newCycleForm;
+
+    function handleCreateNewCycle(data:NewCycleFormData){
+        createNewCycle(data)
+        reset()
     }
 
     const task = watch('task')
     const isSubmitDisabled = !task;
 
+
     return (
         <HomeConteiner>
             <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
-                <FormConteiner>
-                    <label htmlFor="task">Vou trabalhar em</label>
-                    <TaskInput
-                        id="task"
-                        placeholder="Nome para o seu projeto"
-                        list="task-suggestions" 
-                        {...register('task')}
-                    />
 
-                    <datalist id="task-suggestions">
-                        <option value="React-ts"/>
-                        <option value="HTML e CSS"/>
-                        <option value="Back-End com node-js"/>
-                    </datalist>
+               
+                    <FormProvider {...newCycleForm}>
+                        <NewCycleForm />
+                    </FormProvider>
 
-                    <label htmlFor="minutesAmount">durante</label>
-                    <MinutesAmountInput
-                        type="number"
-                        id="minutesAmount"
-                        placeholder="00"
-                        step={5}
-                        min={5}
-                        max={60}
-                        {...register('minutesAmount', {valueAsNumber: true})}
-                    />
-
-                    <span>minutos.</span>
-                </FormConteiner>
-                <CountDownConteiner>
-                    <span>0</span>
-                    <span>0</span>
-                    <Separator>:</Separator>
-                    <span>0</span>
-                    <span>0</span>
-                </CountDownConteiner>
-                <StartButtonCountDown disabled={isSubmitDisabled} type="submit">
-                    <Play size={24} />
-                    Começar
-                </StartButtonCountDown>
+                    <Countdown />
+                {activeCycle ? (
+                    <StopButtonCountDown onClick={interruptCurrentCycle} type="button">
+                        <HandPalm size={24} />
+                        Interromper
+                    </StopButtonCountDown>
+                ) : (
+                    <StartButtonCountDown disabled={isSubmitDisabled} type="submit">
+                        <Play size={24} />
+                        Começar
+                    </StartButtonCountDown>
+                )}
             </form>
 
 
